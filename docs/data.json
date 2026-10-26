@@ -1,0 +1,228 @@
+{
+ "audit": [
+  {
+   "Caller": "ns/shop/sa/frontend",
+   "Target": "ns/shop/sa/orders",
+   "Request": "GET /orders/1",
+   "Decision": "allow"
+  },
+  {
+   "Caller": "ns/shop/sa/frontend",
+   "Target": "ns/shop/sa/payments",
+   "Request": "POST /charge",
+   "Decision": "deny: no rule allows this (default deny)"
+  },
+  {
+   "Caller": "ns/shop/sa/frontend",
+   "Target": "ns/shop/sa/payments",
+   "Request": "GET /admin",
+   "Decision": "deny: no rule allows this (default deny)"
+  },
+  {
+   "Caller": "ns/shop/sa/orders",
+   "Target": "ns/shop/sa/orders",
+   "Request": "GET /orders/1",
+   "Decision": "deny: no rule allows this (default deny)"
+  },
+  {
+   "Caller": "ns/shop/sa/orders",
+   "Target": "ns/shop/sa/payments",
+   "Request": "POST /charge",
+   "Decision": "allow"
+  },
+  {
+   "Caller": "ns/shop/sa/orders",
+   "Target": "ns/shop/sa/payments",
+   "Request": "GET /admin",
+   "Decision": "deny: no rule allows this (default deny)"
+  },
+  {
+   "Caller": "ns/shop/sa/batch",
+   "Target": "ns/shop/sa/orders",
+   "Request": "GET /orders/1",
+   "Decision": "deny: no rule allows this (default deny)"
+  },
+  {
+   "Caller": "ns/shop/sa/batch",
+   "Target": "ns/shop/sa/payments",
+   "Request": "POST /charge",
+   "Decision": "deny: no rule allows this (default deny)"
+  },
+  {
+   "Caller": "ns/shop/sa/batch",
+   "Target": "ns/shop/sa/payments",
+   "Request": "GET /admin",
+   "Decision": "deny: no rule allows this (default deny)"
+  },
+  {
+   "Caller": "ns/shop/sa/frontend",
+   "Target": "ns/shop/sa/orders",
+   "Request": "GET /orders/1",
+   "Decision": "allow"
+  },
+  {
+   "Caller": "ns/shop/sa/frontend",
+   "Target": "ns/shop/sa/orders",
+   "Request": "GET /orders/1",
+   "Decision": "allow"
+  },
+  {
+   "Caller": "ns/shop/sa/frontend",
+   "Target": "ns/shop/sa/orders",
+   "Request": "GET /orders/1",
+   "Decision": "deny: identity revoked"
+  },
+  {
+   "Caller": "ns/shop/sa/batch",
+   "Target": "ns/shop/sa/orders",
+   "Request": "GET /orders/1",
+   "Decision": "allow"
+  }
+ ],
+ "cells": [
+  {
+   "identity": "frontend",
+   "target": "orders  GET /orders/1",
+   "outcome": "allowed",
+   "detail": "200 ok"
+  },
+  {
+   "identity": "frontend",
+   "target": "payments  POST /charge",
+   "outcome": "forbidden",
+   "detail": "403 forbidden: no rule allows this (default deny)"
+  },
+  {
+   "identity": "frontend",
+   "target": "payments  GET /admin",
+   "outcome": "forbidden",
+   "detail": "403 forbidden: no rule allows this (default deny)"
+  },
+  {
+   "identity": "orders",
+   "target": "orders  GET /orders/1",
+   "outcome": "forbidden",
+   "detail": "403 forbidden: no rule allows this (default deny)"
+  },
+  {
+   "identity": "orders",
+   "target": "payments  POST /charge",
+   "outcome": "allowed",
+   "detail": "200 ok"
+  },
+  {
+   "identity": "orders",
+   "target": "payments  GET /admin",
+   "outcome": "forbidden",
+   "detail": "403 forbidden: no rule allows this (default deny)"
+  },
+  {
+   "identity": "batch (valid cert, no rule)",
+   "target": "orders  GET /orders/1",
+   "outcome": "forbidden",
+   "detail": "403 forbidden: no rule allows this (default deny)"
+  },
+  {
+   "identity": "batch (valid cert, no rule)",
+   "target": "payments  POST /charge",
+   "outcome": "forbidden",
+   "detail": "403 forbidden: no rule allows this (default deny)"
+  },
+  {
+   "identity": "batch (valid cert, no rule)",
+   "target": "payments  GET /admin",
+   "outcome": "forbidden",
+   "detail": "403 forbidden: no rule allows this (default deny)"
+  },
+  {
+   "identity": "forged cert (other CA)",
+   "target": "orders  GET /orders/1",
+   "outcome": "rejected",
+   "detail": "remote error: tls: unknown certificate authority"
+  },
+  {
+   "identity": "forged cert (other CA)",
+   "target": "payments  POST /charge",
+   "outcome": "rejected",
+   "detail": "remote error: tls: unknown certificate authority"
+  },
+  {
+   "identity": "forged cert (other CA)",
+   "target": "payments  GET /admin",
+   "outcome": "rejected",
+   "detail": "remote error: tls: unknown certificate authority"
+  },
+  {
+   "identity": "no certificate",
+   "target": "orders  GET /orders/1",
+   "outcome": "rejected",
+   "detail": "remote error: tls: certificate required"
+  },
+  {
+   "identity": "no certificate",
+   "target": "payments  POST /charge",
+   "outcome": "rejected",
+   "detail": "remote error: tls: certificate required"
+  },
+  {
+   "identity": "no certificate",
+   "target": "payments  GET /admin",
+   "outcome": "rejected",
+   "detail": "remote error: tls: certificate required"
+  }
+ ],
+ "policy": {
+  "rules": [
+   {
+    "source": "spiffe://lab.local/ns/shop/sa/frontend",
+    "methods": [
+     "GET"
+    ],
+    "paths": [
+     "/orders"
+    ]
+   },
+   {
+    "source": "spiffe://lab.local/ns/shop/sa/orders",
+    "methods": [
+     "POST"
+    ],
+    "paths": [
+     "/charge"
+    ]
+   }
+  ]
+ },
+ "steps": [
+  {
+   "title": "Frontend certificate with a 1 minute lifetime, used straight away",
+   "result": "200 ok",
+   "outcome": "allowed"
+  },
+  {
+   "title": "Two minutes later, same certificate, no rotation (the server certificate also expired)",
+   "result": "remote error: tls: expired certificate",
+   "outcome": "rejected"
+  },
+  {
+   "title": "Servers rotated, client still holds its expired certificate",
+   "result": "remote error: tls: expired certificate",
+   "outcome": "rejected"
+  },
+  {
+   "title": "Client rotated (serial 118742... to 488333...), no restart",
+   "result": "200 ok",
+   "outcome": "allowed"
+  },
+  {
+   "title": "Identity revoked while its certificate is still valid",
+   "result": "403 forbidden: identity revoked",
+   "outcome": "forbidden"
+  },
+  {
+   "title": "Policy reloaded to allow batch on GET /orders",
+   "result": "200 ok",
+   "outcome": "allowed"
+  }
+ ]
+}

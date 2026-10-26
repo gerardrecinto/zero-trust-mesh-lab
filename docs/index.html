@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zero-trust-mesh-lab</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1c1a;--mut:#6b6b66;--card:#fff;--line:#dcdcd6;--ok:#1b7f4b;--okb:#e3f3ea;--fb:#9a6700;--fbb:#fbf0d4;--rj:#b3261e;--rjb:#fbe6e4;--link:#3b6fd4}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ecece8;--mut:#9a9a94;--card:#1d1d1b;--line:#333330;--ok:#3fb97a;--okb:#16291f;--fb:#e5a824;--fbb:#2b2412;--rj:#e06666;--rjb:#2e1a19;--link:#6d9bf0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:26px 0 8px}p{margin:6px 0}.mut{color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto}
+table{border-collapse:separate;border-spacing:4px;width:100%;font-size:13px}th{font-weight:600;text-align:left;padding:4px 6px}
+td.c{border-radius:6px;padding:8px;vertical-align:top;min-width:170px}
+.allowed{background:var(--okb);color:var(--ok)}.forbidden{background:var(--fbb);color:var(--fb)}.rejected{background:var(--rjb);color:var(--rj)}
+td.c b{display:block;text-transform:uppercase;font-size:11px;letter-spacing:.04em}td.c span{color:var(--fg);opacity:.85;word-break:break-word}
+.step{display:grid;grid-template-columns:90px 1fr;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px;align-items:start}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;text-align:center}
+.legend span{margin-right:14px;font-size:13px}
+pre{margin:0;font:12.5px/1.45 ui-monospace,Menlo,monospace;overflow-x:auto}
+a{color:var(--link)}code{font:13px ui-monospace,Menlo,monospace}
+.auditrow{display:grid;grid-template-columns:1.1fr 1fr 1.2fr 2fr;gap:8px;font-size:12.5px;padding:3px 0;border-bottom:1px dashed var(--line)}
+@media(max-width:700px){.auditrow{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>zero-trust-mesh-lab</h1>
+<p class="mut">Mutual TLS with SPIFFE-style workload identities, default-deny authorization and an audit trail, in Go. The grid below is the recorded result of real TLS connections made by <code>cmd/matrix</code>, not a mock-up. Personal learning project, not a production system and not a replacement for a real CA or a service mesh.</p>
+
+<h2>Who can call what</h2>
+<p class="legend"><span class="pill allowed">allowed</span> identity verified and a rule allows it <span class="pill forbidden">forbidden</span> identity verified, no rule allows it (HTTP 403) <span class="pill rejected">rejected</span> refused during the TLS handshake, the request never reached the service</p>
+<div class="card"><table id="grid"></table></div>
+
+<h2>Certificate lifecycle</h2>
+<div class="card" id="steps"></div>
+
+<h2>Policy and audit log</h2>
+<div class="row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
+<div class="card"><p class="mut">Allow rules (everything else is denied)</p><pre id="policy"></pre></div>
+<div class="card"><p class="mut">Audit log (every request that reached a service guard)</p><div id="audit"></div></div>
+</div>
+
+<h2>What this shows</h2>
+<div class="card">
+<p><b>Identity, not network location.</b> The workload's identity is a SPIFFE ID in the certificate's URI SAN. A caller with no certificate, or one signed by a different CA, is refused in the handshake no matter where it connects from.</p>
+<p><b>Authentication is not authorization.</b> The <code>batch</code> identity has a perfectly valid certificate and still gets 403 everywhere until a rule names it. Policy is default deny and keyed on the verified identity, method and path.</p>
+<p><b>Short-lived credentials.</b> Certificates carry a lifetime; an expired one is rejected, and rotation swaps the certificate for new connections with no restart. Revocation by identity blocks a certificate that is still within its lifetime.</p>
+<p><b>Not covered:</b> a real CA and key storage (the root key lives in memory), certificate revocation lists or OCSP, SPIFFE Workload API and attestation, a sidecar proxy, network policy, and any performance testing.</p>
+</div>
+
+<h2>References</h2>
+<div class="card"><ul>
+<li>NIST, <a href="https://csrc.nist.gov/pubs/sp/800/207/final">SP 800-207: Zero Trust Architecture</a></li>
+<li>SPIFFE, <a href="https://spiffe.io/docs/latest/spiffe-about/spiffe-concepts/">SPIFFE concepts</a> and the <a href="https://github.com/spiffe/spiffe/blob/main/standards/X509-SVID.md">X509-SVID specification</a>; <a href="https://pkg.go.dev/github.com/spiffe/go-spiffe/v2">go-spiffe</a></li>
+<li>Go: <a href="https://pkg.go.dev/crypto/tls">crypto/tls</a> and <a href="https://pkg.go.dev/crypto/x509">crypto/x509</a></li>
+<li>IETF: <a href="https://www.rfc-editor.org/rfc/rfc8446">RFC 8446 (TLS 1.3)</a> and <a href="https://www.rfc-editor.org/rfc/rfc5280">RFC 5280 (X.509 profile)</a></li>
+<li>Google, <a href="https://research.google/pubs/beyondcorp-a-new-approach-to-enterprise-security/">BeyondCorp: A New Approach to Enterprise Security</a></li>
+<li>Istio, <a href="https://istio.io/latest/docs/concepts/security/">Security concepts</a>, for how a production mesh applies the same ideas</li>
+</ul></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+fetch('data.json').then(r=>r.json()).then(d=>{
+  const ids=[...new Set(d.cells.map(c=>c.identity))], tg=[...new Set(d.cells.map(c=>c.target))];
+  $('grid').innerHTML='<tr><th>caller identity</th>'+tg.map(t=>'<th>'+t+'</th>').join('')+'</tr>'+
+   ids.map(i=>'<tr><th>'+i+'</th>'+tg.map(t=>{const c=d.cells.find(x=>x.identity===i&&x.target===t);return '<td class="c '+c.outcome+'"><b>'+c.outcome+'</b><span>'+c.detail.replace(/</g,'&lt;')+'</span></td>'}).join('')+'</tr>').join('');
+  $('steps').innerHTML=d.steps.map(s=>'<div class="step"><span class="pill '+s.outcome+'">'+s.outcome+'</span><span>'+s.title+'<br><span class="mut">'+s.result.replace(/</g,'&lt;')+'</span></span></div>').join('');
+  $('policy').textContent=JSON.stringify(d.policy,null,1).replace(/spiffe:\/\/lab.local\//g,'');
+  $('audit').innerHTML='<div class="auditrow" style="font-weight:600"><span>caller</span><span>target</span><span>request</span><span>decision</span></div>'+d.audit.map(a=>'<div class="auditrow"><span>'+a.Caller+'</span><span>'+a.Target+'</span><span>'+a.Request+'</span><span>'+a.Decision+'</span></div>').join('');
+}).catch(()=>{document.querySelector('main p').textContent='Could not load data.json. Serve this folder over HTTP: python3 -m http.server -d docs'});
+</script>
+</body>
+</html>
